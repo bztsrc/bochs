@@ -1,7 +1,10 @@
 *.o
 *.so
+*.a
 Makefile
 bochs-2.6.8/build/*
+bochs-2.6.8/bochs
+bochs-2.6.8/bximage
 bxversion.*
 config.*
 libtool
