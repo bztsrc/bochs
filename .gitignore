@@ -1,6 +1,10 @@
 *.o
 *.so
+*.lo
+*.loT
 *.a
+*.la
+.libs/
 Makefile
 bochs-2.6.8/build/*
 bochs-2.6.8/bochs
