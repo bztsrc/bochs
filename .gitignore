@@ -1,0 +1,8 @@
+*.o
+*.so
+Makefile
+bochs-2.6.8/build/*
+bxversion.*
+config.*
+libtool
+ltdlconf.h
