@@ -3112,6 +3112,10 @@ void bx_dbg_print_descriptor(Bit32u lo, Bit32u hi)
 #if BX_SUPPORT_X86_64
 void bx_dbg_print_descriptor64(Bit32u lo1, Bit32u hi1, Bit32u lo2, Bit32u hi2)
 {
+  Bit32u base = ((lo1 >> 16) & 0xffff)
+             | ((hi1 << 16) & 0xff0000)
+             | (hi1 & 0xff000000);
+  Bit32u limit = (hi1 & 0x000f0000) | (lo1 & 0xffff);
   Bit32u segment = (lo1 >> 16) & 0xffff;
   Bit64u offset = (lo1 & 0xffff) | (hi1 & 0xffff0000) | ((Bit64u)(lo2) << 32);
   unsigned type = (hi1 >> 8) & 0xf;
@@ -3119,7 +3123,8 @@ void bx_dbg_print_descriptor64(Bit32u lo1, Bit32u hi1, Bit32u lo2, Bit32u hi2)
   unsigned s = (hi1 >> 12) & 0x1;
 
   if (s) {
-    dbg_printf("bx_dbg_print_descriptor64: only system entries displayed in 64bit mode\n");
+    //dbg_printf("bx_dbg_print_descriptor64: only system entries displayed in 64bit mode\n");
+    bx_dbg_print_descriptor(lo1, hi1);
   }
   else {
     static const char *undef = "???";
@@ -3157,7 +3162,7 @@ void bx_dbg_print_descriptor64(Bit32u lo1, Bit32u hi1, Bit32u lo2, Bit32u hi2)
       case BX_SYS_SEGMENT_BUSY_286_TSS:
       case BX_SYS_SEGMENT_AVAIL_386_TSS:
       case BX_SYS_SEGMENT_BUSY_386_TSS:
-        // don't print nothing about 64-bit TSS
+        dbg_printf("at 0x%08x%08x, length 0x%05x", hi2, base, limit);
         break;
       case BX_SYS_SEGMENT_LDT:
         // it's an LDT. not much to print.
@@ -3265,11 +3270,34 @@ void bx_dbg_info_gdt_command(unsigned from, unsigned to)
     if (8*n + 7 > gdtr.limit) break;
     if (bx_dbg_read_linear(dbg_cpu, gdtr.base + 8*n, 8, entry)) {
       dbg_printf("GDT[0x%02x]=", n);
-
       Bit32u lo = (entry[3]  << 24) | (entry[2]  << 16) | (entry[1]  << 8) | (entry[0]);
       Bit32u hi = (entry[7]  << 24) | (entry[6]  << 16) | (entry[5]  << 8) | (entry[4]);
+      unsigned type = (hi >> 8) & 0xf;
+      unsigned s = (hi >> 12) & 0x1;
 
-      bx_dbg_print_descriptor(lo, hi);
+      if (n == 0) {
+        dbg_printf("NULL descriptor");
+        if (type == 0) {
+          dbg_printf("\n");
+          continue;
+        }
+        dbg_printf(" SHOULD BE ZERO, ");
+      }
+#if BX_SUPPORT_X86_64
+      if (BX_CPU(dbg_cpu)->long_mode()) {
+        Bit32u lo2 = (entry[11] << 24) | (entry[10] << 16) | (entry[9]  << 8) | (entry[8]);
+        Bit32u hi2 = (entry[15] << 24) | (entry[14] << 16) | (entry[13] << 8) | (entry[12]);
+        // 64 bit TSS takes 2 descriptor slots
+        if (!s && (type == BX_SYS_SEGMENT_AVAIL_386_TSS || type == BX_SYS_SEGMENT_BUSY_386_TSS)) {
+          bx_dbg_print_descriptor64(lo, hi, lo2, hi2);
+          n++;
+        } else
+          bx_dbg_print_descriptor(lo, hi);
+      } else
+#endif
+      {
+        bx_dbg_print_descriptor(lo, hi);
+      }
     }
     else {
       dbg_printf("error: GDTR+8*%d points to invalid linear address 0x" FMT_ADDRX "\n",
