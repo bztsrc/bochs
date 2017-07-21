@@ -3120,6 +3120,7 @@ void bx_dbg_print_descriptor64(Bit32u lo1, Bit32u hi1, Bit32u lo2, Bit32u hi2)
   Bit64u offset = (lo1 & 0xffff) | (hi1 & 0xffff0000) | ((Bit64u)(lo2) << 32);
   unsigned type = (hi1 >> 8) & 0xf;
   unsigned dpl = (hi1 >> 13) & 0x3;
+  unsigned ist = (hi1) & 0x3;
   unsigned s = (hi1 >> 12) & 0x1;
 
   if (s) {
@@ -3170,6 +3171,9 @@ void bx_dbg_print_descriptor64(Bit32u lo1, Bit32u hi1, Bit32u lo2, Bit32u hi2)
       default:
         // task, int, trap, or call gate.
         dbg_printf("target=0x%04x:" FMT_ADDRX ", DPL=%d", segment, offset, dpl);
+        if (type == BX_386_INTERRUPT_GATE || type == BX_386_TRAP_GATE) {
+            dbg_printf(", IST=%d", ist);
+        }
         break;
       }
     }
